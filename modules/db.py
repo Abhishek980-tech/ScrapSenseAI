@@ -42,3 +42,11 @@ def get_db():
                 "Verify your MONGODB_URI / Streamlit secrets and ensure the MongoDB cluster allows connections from the deployment environment."
             ) from exc
     return _client[mongodb_db]
+
+
+def check_db_connection():
+    """Validate MongoDB connectivity before authentication flows."""
+    try:
+        get_db()
+    except Exception as exc:
+        raise ConnectionError(str(exc)) from exc

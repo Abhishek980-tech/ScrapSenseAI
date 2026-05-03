@@ -21,6 +21,7 @@ def _get_env_value(key: str, default=None):
 
 def get_db():
     global _client
+    mongodb_db = _get_env_value("MONGODB_DB", "scrapsenseai")
     if _client is None:
         mongodb_uri = _get_env_value("MONGODB_URI")
         if not mongodb_uri:
@@ -28,7 +29,5 @@ def get_db():
                 "MONGODB_URI is not set. "
                 "Set it in a local .env file or configure it in your deployment environment / Streamlit secrets."
             )
-
-        mongodb_db = _get_env_value("MONGODB_DB", "scrapsenseai")
         _client = MongoClient(mongodb_uri)
     return _client[mongodb_db]

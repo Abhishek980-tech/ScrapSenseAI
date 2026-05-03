@@ -1,16 +1,23 @@
-"""
-report_manager.py
------------------
-Handles saving and loading community pollution reports to/from a CSV file.
-"""
-
-import os
+﻿import os
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 
+from modules.db import get_db
 
 REPORTS_FILE = "data/reports.csv"
-COLUMNS = ["Name", "Location", "Latitude", "Longitude", "Description", "Timestamp"]
+REPORTS_COLLECTION = os.getenv("MONGODB_REPORTS_COLLECTION", "reports")
+REPORT_COLUMNS = [
+    "name",
+    "location_name",
+    "description",
+    "latitude",
+    "longitude",
+    "location",
+    "timestamp",
+    "created_at",
+    "source",
+    "user_email"
+]
 
 
 def _ensure_file_exists():
@@ -21,97 +28,204 @@ def _ensure_file_exists():
     os.makedirs("data", exist_ok=True)
 
     if not os.path.exists(REPORTS_FILE):
-        # Create an empty DataFrame with the correct columns and save it
-        df = pd.DataFrame(columns=COLUMNS)
+        df = pd.DataFrame(columns=REPORT_COLUMNS)
         df.to_csv(REPORTS_FILE, index=False)
 
 
-def save_report(name: str, location: str, latitude: float, longitude: float, description: str) -> bool:
-    """
-    Append a new pollution report to the CSV file.
+def _normalize_report_df(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize report DataFrame columns to lowercase names."""
+    df = df.copy()
 
-    Args:
-        name (str): Reporter's name.
-        location (str): Location name/description.
-        latitude (float): GPS latitude coordinate.
-        longitude (float): GPS longitude coordinate.
-        description (str): Description of the pollution observed.
+    rename_map = {
+        "Name": "name",
+        "Location": "location_name",
+        "Location Name": "location_name",
+        "Latitude": "latitude",
+        "Longitude": "longitude",
+        "Description": "description",
+        "Timestamp": "timestamp",
+        "Created_At": "created_at",
+        "createdAt": "created_at",
+        "User_Email": "user_email",
+        "userEmail": "user_email",
+    }
+    df = df.rename(columns=rename_map)
 
-    Returns:
-        bool: True if saved successfully, False otherwise.
-    """
+    for col in REPORT_COLUMNS:
+        if col not in df.columns:
+            df[col] = ""
+
+    return df[REPORT_COLUMNS]
+
+
+def _save_report_csv(
+    name: str,
+    location_name: str,
+    latitude: float,
+    longitude: float,
+    description: str,
+    user_email: str = ""
+) -> bool:
+    """CSV fallback for save_report."""
     _ensure_file_exists()
 
     try:
         new_entry = pd.DataFrame([{
-            "Name": name.strip(),
-            "Location": location.strip(),
-            "Latitude": latitude,
-            "Longitude": longitude,
-            "Description": description.strip(),
-            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "name": name.strip(),
+            "location_name": location_name.strip(),
+            "description": description.strip(),
+            "latitude": float(latitude),
+            "longitude": float(longitude),
+            "location": "",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "source": "manual",
+            "user_email": user_email.strip().lower()
         }])
 
-        # Append without writing headers again
         new_entry.to_csv(REPORTS_FILE, mode="a", header=False, index=False)
         return True
-
     except Exception as e:
-        print(f"Error saving report: {e}")
+        print(f"Error saving report to CSV: {e}")
         return False
 
 
-def load_reports() -> pd.DataFrame:
-    """
-    Load all pollution reports from the CSV file.
+def save_report(
+    name: str,
+    location_name: str,
+    latitude: float,
+    longitude: float,
+    description: str,
+    user_email: str = ""
+) -> bool:
+    """Save a pollution report to MongoDB when available; otherwise to CSV."""
+    report_doc = {
+        "name": name.strip(),
+        "location_name": location_name.strip(),
+        "description": description.strip(),
+        "latitude": float(latitude),
+        "longitude": float(longitude),
+        "location": {
+            "type": "Point",
+            "coordinates": [float(longitude), float(latitude)]
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(timezone.utc),
+        "source": "manual",
+        "user_email": user_email.strip().lower()
+    }
 
-    Returns:
-        pd.DataFrame: DataFrame containing all reports, or empty DataFrame if file is missing.
-    """
+    try:
+        reports = get_db()[REPORTS_COLLECTION]
+        reports.insert_one(report_doc)
+        return True
+    except Exception as e:
+        print(f"Error saving report to MongoDB: {e}")
+        return _save_report_csv(name, location_name, latitude, longitude, description, user_email)
+
+
+def _load_reports_csv() -> pd.DataFrame:
+    """CSV fallback for load_reports."""
     _ensure_file_exists()
 
     try:
         df = pd.read_csv(REPORTS_FILE)
-
-        # Ensure all expected columns exist (handle partially written files)
-        for col in COLUMNS:
-            if col not in df.columns:
-                df[col] = ""
-
-        return df
-
+        return _normalize_report_df(df)
     except pd.errors.EmptyDataError:
-        return pd.DataFrame(columns=COLUMNS)
-
+        return pd.DataFrame(columns=REPORT_COLUMNS)
     except Exception as e:
-        print(f"Error loading reports: {e}")
-        return pd.DataFrame(columns=COLUMNS)
+        print(f"Error loading reports from CSV: {e}")
+        return pd.DataFrame(columns=REPORT_COLUMNS)
+
+
+def load_reports() -> pd.DataFrame:
+    """Load all pollution reports from MongoDB or fallback to CSV."""
+    try:
+        reports = get_db()[REPORTS_COLLECTION]
+        docs = list(reports.find({}, {"_id": 0}))
+        if not docs:
+            return pd.DataFrame(columns=REPORT_COLUMNS)
+
+        df = pd.DataFrame(docs)
+        return _normalize_report_df(df)
+    except Exception as e:
+        print(f"Error loading reports from MongoDB: {e}")
+        return _load_reports_csv()
 
 
 def get_valid_map_reports() -> pd.DataFrame:
-    """
-    Return reports that have valid (non-null, in-range) latitude/longitude values.
-    Used for rendering markers on the pollution map.
-
-    Returns:
-        pd.DataFrame: Filtered DataFrame with valid GPS coordinates.
-    """
+    """Return reports with valid latitude/longitude for map rendering."""
     df = load_reports()
-
     if df.empty:
         return df
 
-    # Drop rows with missing coordinates
-    df = df.dropna(subset=["Latitude", "Longitude"])
+    df = df.dropna(subset=["latitude", "longitude"])
+    df["latitude"] = pd.to_numeric(df["latitude"], errors="coerce")
+    df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
 
-    # Convert to numeric, coercing errors
-    df["Latitude"] = pd.to_numeric(df["Latitude"], errors="coerce")
-    df["Longitude"] = pd.to_numeric(df["Longitude"], errors="coerce")
-
-    # Filter to valid geographic ranges
     df = df[
-        (df["Latitude"].between(-90, 90)) &
-        (df["Longitude"].between(-180, 180))
+        (df["latitude"].between(-90, 90)) &
+        (df["longitude"].between(-180, 180))
     ]
 
     return df.reset_index(drop=True)
+
+
+def save_detection_report(
+    detections: list,
+    location_name: str,
+    latitude: float,
+    longitude: float,
+    user_email: str = ""
+) -> bool:
+    """
+    Save a detection result as a report to MongoDB when available; otherwise to CSV.
+    
+    Args:
+        detections (list): List of detection dicts with label, confidence, bbox
+        location_name (str): Name of the location where detection was made
+        latitude (float): Latitude coordinate
+        longitude (float): Longitude coordinate
+        user_email (str): User email of who performed the detection
+        
+    Returns:
+        bool: True if saved successfully, False otherwise
+    """
+    # Count detections per class
+    label_counts = {}
+    for d in detections:
+        lbl = d["label"]
+        if lbl != "Unknown Debris":
+            label_counts[lbl] = label_counts.get(lbl, 0) + 1
+    
+    # Create summary string
+    summary = ", ".join([f"{count} {cls}" for cls, count in label_counts.items()])
+    if not summary:
+        summary = "No debris detected"
+    
+    total_objects = len([d for d in detections if d["label"] != "Unknown Debris"])
+    
+    report_doc = {
+        "name": "Detection Report",
+        "location_name": location_name.strip(),
+        "description": f"Detected: {summary} (Total: {total_objects} objects)",
+        "latitude": float(latitude),
+        "longitude": float(longitude),
+        "location": {
+            "type": "Point",
+            "coordinates": [float(longitude), float(latitude)]
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(timezone.utc),
+        "source": "detection",  # Different source for detection reports
+        "user_email": user_email.strip().lower(),
+        "detections": detections  # Store full detection data
+    }
+
+    try:
+        reports = get_db()[REPORTS_COLLECTION]
+        reports.insert_one(report_doc)
+        return True
+    except Exception as e:
+        print(f"Error saving detection report to MongoDB: {e}")
+        return False

@@ -1,18 +1,4 @@
-"""
-app.py
-------
-ScrapSenseAI – Underwater Automated Trash Detection and Classification System
 
-Main Streamlit entry point. Organizes the UI into 5 tabs:
-    1. Trash Detection
-    2. Detection Analytics
-    3. Community Reports
-    4. Global Pollution Map
-    5. About Project
-
-Run with:
-    streamlit run app.py
-"""
 
 import streamlit as st
 import pandas as pd
@@ -23,14 +9,15 @@ import io
 from modules.model_loader import load_model
 from modules.image_processing import enhance_underwater_image
 from modules.detection import run_detection, DETECTION_CLASSES
-from modules.report_manager import save_report, load_reports, get_valid_map_reports
+from modules.report_manager import save_report, save_detection_report, load_reports, get_valid_map_reports
 from modules.map_view import build_pollution_map
 from streamlit_folium import st_folium
+from modules.auth import create_user, verify_user
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
-# ═══════════════════════════════════════════════════════════════════════════════
+
+if "auth_user" not in st.session_state:
+    st.session_state["auth_user"] = None
 
 st.set_page_config(
     page_title="ScrapSenseAI",
@@ -39,7 +26,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ── Custom CSS ────────────────────────────────────────────────────────────────
+# Custom CSS 
 st.markdown("""
 <style>
     /* ── Global font & background ── */
@@ -124,10 +111,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # HEADER
-# ═══════════════════════════════════════════════════════════════════════════════
+
 
 st.markdown("""
 <div class="app-header">
@@ -136,10 +121,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SIDEBAR SETTINGS
-# ═══════════════════════════════════════════════════════════════════════════════
 
 with st.sidebar:
     st.markdown("## ⚙️ Detection Settings")
@@ -174,16 +156,13 @@ with st.sidebar:
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # LOAD MODEL (cached across all tabs)
-# ═══════════════════════════════════════════════════════════════════════════════
+
 
 model = load_model("best.pt")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # TABS
-# ═══════════════════════════════════════════════════════════════════════════════
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🔍 Trash Detection",
@@ -194,9 +173,54 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 
-# ╔═════════════════════════════════════════════════════════════════════════════╗
-# ║  TAB 1 – TRASH DETECTION                                                  ║
-# ╚═════════════════════════════════════════════════════════════════════════════╝
+# AUTH
+st.sidebar.markdown("## 🔐 Account")
+
+if st.session_state["auth_user"] is None:
+    auth_tab1, auth_tab2 = st.sidebar.tabs(["Login", "Signup"])
+
+    with auth_tab1:
+        login_email = st.text_input("Email", key="login_email")
+        login_password = st.text_input("Password", type="password", key="login_password")
+        if st.button("Login"):
+            user = verify_user(login_email, login_password)
+            if user:
+                st.session_state["auth_user"] = {
+                    "name": user.get("name", "User"),
+                    "email": user.get("email")
+                }
+                st.success("Logged in successfully")
+                st.rerun()
+            else:
+                st.error("Invalid email or password")
+
+    with auth_tab2:
+        signup_name = st.text_input("Name", key="signup_name")
+        signup_email = st.text_input("Email", key="signup_email")
+        signup_password = st.text_input("Password", type="password", key="signup_password")
+        if st.button("Create Account"):
+            if len(signup_password) < 8:
+                st.warning("Password must be at least 8 characters")
+            else:
+                ok, msg = create_user(signup_name, signup_email, signup_password)
+                if ok:
+                    st.success(msg)
+                else:
+                    st.error(msg)
+else:
+    user = st.session_state["auth_user"]
+    st.sidebar.success(f"Logged in as {user['name']}")
+    if st.sidebar.button("Logout"):
+        st.session_state["auth_user"] = None
+        st.rerun()
+
+
+if st.session_state["auth_user"] is None:
+    st.warning("Please log in to submit a report.")
+    st.stop()
+
+# TAB 1 – TRASH DETECTION
+
 
 with tab1:
     st.markdown('<p class="section-title">Upload an Underwater Image for Detection</p>', unsafe_allow_html=True)
@@ -226,7 +250,7 @@ with tab1:
                     model, enhanced_image, confidence_threshold
                 )
 
-            # ── Display Results Side-by-Side ───────────────────────────────
+            # Display results
             st.markdown('<p class="section-title">Detection Results</p>', unsafe_allow_html=True)
 
             col_orig, col_detect = st.columns(2)
@@ -239,7 +263,7 @@ with tab1:
                 st.markdown("**Detected Objects**")
                 st.image(annotated_image, use_container_width=True, caption="RT-DETR Detections")
 
-            # ── Detection Summary ──────────────────────────────────────────
+            # Detection Summary Metrics
             st.markdown('<p class="section-title">Detection Summary</p>', unsafe_allow_html=True)
 
             if detections:
@@ -274,7 +298,7 @@ with tab1:
 
                 st.markdown("")
 
-                # Table of individual detections
+# Table of individual detections
                 det_df = pd.DataFrame(detections)[["label", "confidence", "bbox"]]
                 det_df.columns = ["Class Label", "Confidence", "Bounding Box [x1,y1,x2,y2]"]
                 det_df.index += 1
@@ -282,6 +306,47 @@ with tab1:
 
                 # Store in session state for Analytics tab
                 st.session_state["last_detections"] = detections
+                
+                # Save Detection Report Section
+                st.markdown("---")
+                st.markdown('<p class="section-title">💾 Save Detection Report</p>', unsafe_allow_html=True)
+                st.markdown("Save these detection results to the database and map.")
+                
+                with st.form("detection_save_form", clear_on_submit=True):
+                    col_loc1, col_loc2 = st.columns(2)
+                    with col_loc1:
+                        det_location_name = st.text_input("📍 Location Name", placeholder="e.g. Great Barrier Reef, Australia", key="det_location")
+                    with col_loc2:
+                        det_latitude = st.number_input("🌐 Latitude", min_value=-90.0, max_value=90.0, value=0.0, step=0.0001, format="%.4f", key="det_lat")
+                        det_longitude = st.number_input("🌐 Longitude", min_value=-180.0, max_value=180.0, value=0.0, step=0.0001, format="%.4f", key="det_lon")
+                    
+                    save_detect_btn = st.form_submit_button("💾 Save Detection", use_container_width=True)
+                
+                if save_detect_btn:
+                    # Filter out Unknown Debris for saving
+                    valid_detections = [d for d in detections if d["label"] != "Unknown Debris"]
+                    if not valid_detections:
+                        st.warning("⚠️ No valid debris detected to save.")
+                    elif not det_location_name.strip():
+                        st.warning("⚠️ Please enter a location name.")
+                    elif abs(det_latitude) < 1e-6 and abs(det_longitude) < 1e-6:
+                        st.warning("⚠️ Please enter valid coordinates (0.0,0.0 is not accepted).")
+                    else:
+                        success = save_detection_report(
+                            detections=valid_detections,
+                            location_name=det_location_name,
+                            latitude=det_latitude,
+                            longitude=det_longitude,
+                            user_email=st.session_state["auth_user"]["email"]
+                        )
+                        if success:
+                            st.markdown(
+                                '<div class="success-box">✅ Detection report saved successfully! '
+                                'View it on the Global Pollution Map.</div>',
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.error("❌ Failed to save detection report.")
 
             else:
                 st.info("✅ No debris detected in this image at the selected confidence threshold.")
@@ -298,9 +363,7 @@ with tab1:
         """, unsafe_allow_html=True)
 
 
-# ╔═════════════════════════════════════════════════════════════════════════════╗
-# ║  TAB 2 – DETECTION ANALYTICS                                               ║
-# ╚═════════════════════════════════════════════════════════════════════════════╝
+# TAB 2 – DETECTION ANALYTICS
 
 with tab2:
     st.markdown('<p class="section-title">Detection Analytics</p>', unsafe_allow_html=True)
@@ -313,7 +376,7 @@ with tab2:
     else:
         total = len(detections)
 
-        # ── Summary Metrics ───────────────────────────────────────────────
+        # Summary Metrics 
         col1, col2, col3 = st.columns(3)
         with col1:
             st.markdown(f"""
@@ -343,7 +406,7 @@ with tab2:
 
         st.markdown("")
 
-        # ── Class Count Breakdown ─────────────────────────────────────────
+        # Class Count Breakdown 
         st.markdown('<p class="section-title">Objects Detected per Class</p>', unsafe_allow_html=True)
 
         label_counts = {}
@@ -366,8 +429,7 @@ with tab2:
         with col_chart:
             st.markdown("**Bar Chart**")
             st.bar_chart(count_df.set_index("Class")["Count"])
-
-        # ── Confidence Distribution ───────────────────────────────────────
+# CONFIDENCE SCORE DISTRIBUTION
         st.markdown('<p class="section-title">Confidence Score Distribution</p>', unsafe_allow_html=True)
 
         conf_df = pd.DataFrame({
@@ -379,10 +441,7 @@ with tab2:
         st.line_chart(conf_df.set_index("Detection #")["Confidence"])
 
 
-# ╔═════════════════════════════════════════════════════════════════════════════╗
-# ║  TAB 3 – COMMUNITY REPORTS                                                 ║
-# ╚═════════════════════════════════════════════════════════════════════════════╝
-
+# COMMUNITY REPORTS
 with tab3:
     st.markdown('<p class="section-title">Submit a Marine Pollution Report</p>', unsafe_allow_html=True)
     st.markdown("Help us track ocean pollution. Fill out the form below to report a sighting.")
@@ -419,13 +478,16 @@ with tab3:
             st.warning("⚠️ Please enter a location name before submitting.")
         elif not description.strip():
             st.warning("⚠️ Please add a description before submitting.")
+        elif abs(latitude) < 1e-6 and abs(longitude) < 1e-6:
+            st.warning("⚠️ Please enter valid latitude and longitude values. 0.0,0.0 is not accepted.")
         else:
             success = save_report(
                 name=reporter_name,
-                location=location_name,
+                location_name=location_name,
                 latitude=latitude,
                 longitude=longitude,
-                description=description
+                description=description,
+                user_email=st.session_state["auth_user"]["email"]
             )
             if success:
                 st.markdown(
@@ -436,7 +498,7 @@ with tab3:
             else:
                 st.error("❌ Failed to save the report. Please try again.")
 
-    # ── Display All Submitted Reports ─────────────────────────────────────
+# Display all reports in a table
     st.markdown('<p class="section-title">All Submitted Reports</p>', unsafe_allow_html=True)
 
     all_reports = load_reports()
@@ -445,15 +507,22 @@ with tab3:
         st.info("📭 No reports have been submitted yet. Be the first to report!")
     else:
         st.markdown(f"**{len(all_reports)}** report(s) submitted so far.")
-        display_cols = [c for c in ["Name", "Location", "Latitude", "Longitude", "Description", "Timestamp"]
+        all_reports = all_reports.rename(columns={
+            "name": "Name",
+            "location_name": "Location",
+            "latitude": "Latitude",
+            "longitude": "Longitude",
+            "description": "Description",
+            "timestamp": "Timestamp",
+            "source": "Source",
+            "user_email": "User Email"
+        })
+        display_cols = [c for c in ["Name", "Location", "Latitude", "Longitude", "Description", "Timestamp", "Source", "User Email"]
                         if c in all_reports.columns]
         st.dataframe(all_reports[display_cols], use_container_width=True)
 
 
-# ╔═════════════════════════════════════════════════════════════════════════════╗
-# ║  TAB 4 – GLOBAL POLLUTION MAP                                              ║
-# ╚═════════════════════════════════════════════════════════════════════════════╝
-
+# TAB 4 – GLOBAL POLLUTION MAP
 with tab4:
     st.markdown('<p class="section-title">Global Marine Pollution Map</p>', unsafe_allow_html=True)
     st.markdown(
@@ -479,9 +548,7 @@ with tab4:
     )
 
 
-# ╔═════════════════════════════════════════════════════════════════════════════╗
-# ║  TAB 5 – ABOUT PROJECT                                                     ║
-# ╚═════════════════════════════════════════════════════════════════════════════╝
+# TAB 5 – ABOUT PROJECT
 
 with tab5:
     st.markdown('<p class="section-title">About ScrapSenseAI</p>', unsafe_allow_html=True)

@@ -28,6 +28,7 @@ wheels/
 
 # Model files (large)
 *.pt
+!best.pt
 *.pth
 *.onnx
 *.h5

@@ -4,13 +4,20 @@ model_loader.py
 Handles loading of the RT-DETR object detection model using Ultralytics.
 """
 
-import streamlit as st
-from ultralytics import RTDETR
 import os
+import streamlit as st
 
 
 @st.cache_resource(show_spinner="Loading detection model...")
 def load_model(model_path: str = "best.pt"):
+    try:
+        from ultralytics import RTDETR
+    except ImportError:
+        st.error(
+            "❌ Missing dependency: OpenCV is required by Ultralytics. "
+            "Install it with `pip install opencv-python-headless` or `pip install -r requirements.txt`."
+        )
+        return None
     """
     Load the RT-DETR model from the given path.
     Caches the model in session to avoid reloading on each run.

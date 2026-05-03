@@ -1,5 +1,6 @@
 import os
 from pymongo import MongoClient, errors
+import ssl
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -42,6 +43,7 @@ def get_db():
                 tls=True,
                 tlsAllowInvalidCertificates=False,
                 tlsAllowInvalidHostnames=False,
+                ssl_version=ssl.PROTOCOL_TLSv1_2,
             )
             _client.admin.command("ping")
         except errors.PyMongoError as exc:

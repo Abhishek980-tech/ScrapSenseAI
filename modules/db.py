@@ -39,6 +39,9 @@ def get_db():
                 mongodb_uri,
                 serverSelectionTimeoutMS=5000,
                 connectTimeoutMS=5000,
+                tls=True,
+                tlsAllowInvalidCertificates=False,
+                tlsAllowInvalidHostnames=False,
             )
             _client.admin.command("ping")
         except errors.PyMongoError as exc:

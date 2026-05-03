@@ -13,7 +13,6 @@ from modules.report_manager import save_report, save_detection_report, load_repo
 from modules.map_view import build_pollution_map
 from streamlit_folium import st_folium
 from modules.auth import create_user, verify_user
-from modules.db import check_db_connection
 
 # PAGE CONFIGURATION
 
@@ -177,19 +176,6 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # AUTH
 st.sidebar.markdown("## 🔐 Account")
 
-db_connection_error = None
-try:
-    check_db_connection()
-except Exception as exc:
-    db_connection_error = str(exc)
-
-if db_connection_error:
-    st.sidebar.error(
-        "Database connection failed. "
-        "Please verify Streamlit Secrets and MongoDB Atlas network access."
-    )
-    st.sidebar.markdown(f"**Detail:** {db_connection_error}")
-
 if st.session_state["auth_user"] is None:
     auth_tab1, auth_tab2 = st.sidebar.tabs(["Login", "Signup"])
 
@@ -197,19 +183,7 @@ if st.session_state["auth_user"] is None:
         login_email = st.text_input("Email", key="login_email")
         login_password = st.text_input("Password", type="password", key="login_password")
         if st.button("Login"):
-            if db_connection_error:
-                st.error("Login disabled: database connection is unavailable.")
-                st.stop()
-
-            try:
-                user = verify_user(login_email, login_password)
-            except ConnectionError as exc:
-                st.error(f"Login failed: {exc}")
-                user = None
-            except Exception as exc:
-                st.error(f"Login failed: {exc}")
-                user = None
-
+            user = verify_user(login_email, login_password)
             if user:
                 st.session_state["auth_user"] = {
                     "name": user.get("name", "User"),
@@ -218,30 +192,17 @@ if st.session_state["auth_user"] is None:
                 st.success("Logged in successfully")
                 st.rerun()
             else:
-                if login_email and login_password and not db_connection_error:
-                    st.error("Invalid email or password")
+                st.error("Invalid email or password")
 
     with auth_tab2:
         signup_name = st.text_input("Name", key="signup_name")
         signup_email = st.text_input("Email", key="signup_email")
         signup_password = st.text_input("Password", type="password", key="signup_password")
         if st.button("Create Account"):
-            if db_connection_error:
-                st.error("Signup disabled: database connection is unavailable.")
-                st.stop()
-
             if len(signup_password) < 8:
                 st.warning("Password must be at least 8 characters")
             else:
-                try:
-                    ok, msg = create_user(signup_name, signup_email, signup_password)
-                except ConnectionError as exc:
-                    ok = False
-                    msg = f"Account creation failed: {exc}"
-                except Exception as exc:
-                    ok = False
-                    msg = f"Account creation failed: {exc}"
-
+                ok, msg = create_user(signup_name, signup_email, signup_password)
                 if ok:
                     st.success(msg)
                 else:

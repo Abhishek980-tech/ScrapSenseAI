@@ -183,7 +183,12 @@ if st.session_state["auth_user"] is None:
         login_email = st.text_input("Email", key="login_email")
         login_password = st.text_input("Password", type="password", key="login_password")
         if st.button("Login"):
-            user = verify_user(login_email, login_password)
+            try:
+                user = verify_user(login_email, login_password)
+            except Exception as exc:
+                st.error(f"Login failed: {exc}")
+                user = None
+
             if user:
                 st.session_state["auth_user"] = {
                     "name": user.get("name", "User"),
@@ -192,7 +197,8 @@ if st.session_state["auth_user"] is None:
                 st.success("Logged in successfully")
                 st.rerun()
             else:
-                st.error("Invalid email or password")
+                if login_email and login_password:
+                    st.error("Invalid email or password")
 
     with auth_tab2:
         signup_name = st.text_input("Name", key="signup_name")
@@ -202,7 +208,12 @@ if st.session_state["auth_user"] is None:
             if len(signup_password) < 8:
                 st.warning("Password must be at least 8 characters")
             else:
-                ok, msg = create_user(signup_name, signup_email, signup_password)
+                try:
+                    ok, msg = create_user(signup_name, signup_email, signup_password)
+                except Exception as exc:
+                    ok = False
+                    msg = f"Account creation failed: {exc}"
+
                 if ok:
                     st.success(msg)
                 else:

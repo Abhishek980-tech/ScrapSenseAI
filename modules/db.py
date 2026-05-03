@@ -30,9 +30,13 @@ def get_db():
                 "Set it in a local .env file or configure it in your deployment environment / Streamlit secrets."
             )
         try:
-            _client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=5000)
+            _client = MongoClient(
+                mongodb_uri,
+                serverSelectionTimeoutMS=5000,
+                connectTimeoutMS=5000,
+            )
             _client.admin.command("ping")
-        except errors.ServerSelectionTimeoutError as exc:
+        except errors.PyMongoError as exc:
             raise ConnectionError(
                 "Unable to reach MongoDB. "
                 "Verify your MONGODB_URI / Streamlit secrets and ensure the MongoDB cluster allows connections from the deployment environment."

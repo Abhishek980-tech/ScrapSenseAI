@@ -1,9 +1,19 @@
 # 🌊 ScrapSenseAI
-### Underwater Automated Trash Detection and Classification System
+RemoteSigned)
+Underwater Automated Trash Detection and Classification System using RT-DETR.
 
-ScrapSenseAI uses a trained **RT-DETR** model to detect and classify 15 types of
-underwater debris in uploaded images. It also features community pollution reporting
-and a global interactive pollution map.
+
+ScrapSenseAI uses a trained **RT-DETR** model to detect and classify 15 types of underwater debris in uploaded images. It also features community pollution reporting and a global interactive pollution map.
+
+---
+
+## ✨ Features
+
+- 🔍 **Trash Detection** - Upload underwater images for automatic debris detection
+- 📊 **Detection Analytics** - View statistics and charts from detection results
+- 📋 **Community Reports** - Submit geotagged pollution reports
+- 🗺️ **Global Pollution Map** - Interactive map of all submitted reports
+- 🖼️ **Image Enhancement** - Dark Channel Prior for improving underwater image clarity
 
 ---
 
@@ -11,59 +21,81 @@ and a global interactive pollution map.
 
 ```
 ScrapSenseAI/
-├── app.py                        ← Main Streamlit application
-├── best.pt                       ← RT-DETR model weights (add this!)
-├── requirements.txt
-├── data/
-│   └── reports.csv               ← Community pollution reports
-└── modules/
-    ├── __init__.py
-    ├── model_loader.py           ← Load RT-DETR model
-    ├── image_processing.py       ← Dark Channel Prior enhancement
-    ├── detection.py              ← Run inference & draw bounding boxes
-    ├── report_manager.py         ← Save/load community reports
-    └── map_view.py               ← Generate Folium pollution map
+├── app.py                      # Main Streamlit application
+├── best.pt                    # RT-DETR model weights (add this!)
+├── requirements.txt          # Python dependencies
+├── .env                     # Environment variables
+├── README.md                # This file
+├── DATA/
+│   ├── reports.csv          # Community pollution reports
+│   └── results.csv          # Detection results
+├── modules/
+│   ├── __init__.py
+│   ├── auth.py              # User authentication
+│   ├── db.py               # MongoDB connection
+│   ├── detection.py        # RT-DETR inference
+│   ├── image_processing.py # Dark Channel Prior enhancement
+│   ├── map_view.py        # Folium pollution map
+│   ├── model_loader.py     # Model loading utilities
+│   ├── mongo_setup.py    # MongoDB index setup
+│   └── report_manager.py # Report CRUD operations
+└── venv/                   # Virtual environment
 ```
 
 ---
 
-## ⚙️ Setup Instructions
+## 🚀 Quick Start
 
-### 1. Clone / download the project
-```bash
-cd ScrapSenseAI
-```
+### Prerequisites
 
-### 2. Create a virtual environment (recommended)
-```bash
-python -m venv venv
-source venv/bin/activate        # Linux/macOS
-venv\Scripts\activate           # Windows
-```
+- Python 3.10+
+- MongoDB (local or Atlas)
 
-### 3. Install dependencies
-```bash
-pip install -r requirements.txt
-```
+### Installation
 
-### 4. Add your model weights
-Place your trained `best.pt` file in the **project root** (same level as `app.py`):
-```
-ScrapSenseAI/
-├── app.py
-├── best.pt   ← here
-```
+1. **Clone the repository**
+   ```bash
+   cd ScrapSenseAI
+   ```
 
-### 5. Run the application
-```bash
-streamlit run app.py
-```
+2. **Create virtual environment**
+   ```bash
+   python -m venv venv
+   venv\Scripts\activate  # Windows
+   source venv/bin/activate  # Linux/macOS
+   ```
 
-The app will open at `http://localhost:8501` in your browser.
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Add model weights**
+   
+   Place your trained `best.pt` file in the project root.
+
+5. **Configure environment**
+   
+   Update `.env` with your MongoDB connection string:
+   ```
+   MONGODB_URI=mongodb://localhost:27017
+   ```
+
+6. **Setup MongoDB indexes**
+   ```bash
+   python -m modules.mongo_setup
+   ```
+
+7. **Run the application**
+   ```bash
+   streamlit run app.py
+   ```
+
+The app will open at `http://localhost:8501`
 
 ---
 
-## 🗑️ Detectable Classes (15)
+## 🎯 Detectable Classes (15)
 
 | # | Class | # | Class |
 |---|-------|---|-------|
@@ -76,27 +108,16 @@ The app will open at `http://localhost:8501` in your browser.
 | 7 | metal | 15 | tire |
 | 8 | misc | | |
 
-Objects detected below the confidence threshold are labeled **Unknown Debris**.
-
 ---
 
 ## 🛠️ Tech Stack
 
-- **RT-DETR** (Ultralytics) – Real-Time Detection Transformer
-- **OpenCV** – Dark Channel Prior image enhancement
-- **PyTorch** – Deep learning backend
-- **Streamlit** – Web application framework
-- **Folium** – Interactive maps
-- **Pandas / NumPy** – Data analytics
+- **RT-DETR** (Ultralytics) – Object Detection
+- **OpenCV** – Image Enhancement
+- **PyTorch** – Deep Learning
+- **Streamlit** – Web Framework
+- **MongoDB** – Database
+- **Folium** – Interactive Maps
 
 ---
 
-## 📊 Application Tabs
-
-| Tab | Description |
-|-----|-------------|
-| 🔍 Trash Detection | Upload image → enhance → detect → annotate |
-| 📊 Detection Analytics | Charts and stats from latest detection |
-| 📋 Community Reports | Submit geotagged pollution reports |
-| 🗺️ Global Pollution Map | Interactive map of all submitted reports |
-| ℹ️ About Project | Project details and tech stack |

@@ -1,5 +1,5 @@
 import os
-from pymongo import MongoClient
+from pymongo import MongoClient, errors
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,5 +29,12 @@ def get_db():
                 "MONGODB_URI is not set. "
                 "Set it in a local .env file or configure it in your deployment environment / Streamlit secrets."
             )
-        _client = MongoClient(mongodb_uri)
+        try:
+            _client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=5000)
+            _client.admin.command("ping")
+        except errors.ServerSelectionTimeoutError as exc:
+            raise ConnectionError(
+                "Unable to reach MongoDB. "
+                "Verify your MONGODB_URI / Streamlit secrets and ensure the MongoDB cluster allows connections from the deployment environment."
+            ) from exc
     return _client[mongodb_db]

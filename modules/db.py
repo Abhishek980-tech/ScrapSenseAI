@@ -29,6 +29,11 @@ def get_db():
                 "MONGODB_URI is not set. "
                 "Set it in a local .env file or configure it in your deployment environment / Streamlit secrets."
             )
+        if "your-mongodb-connection-string" in mongodb_uri:
+            raise ValueError(
+                "MONGODB_URI is still using the placeholder string. "
+                "Replace it with your actual MongoDB connection string in .env or Streamlit Secrets."
+            )
         try:
             _client = MongoClient(
                 mongodb_uri,

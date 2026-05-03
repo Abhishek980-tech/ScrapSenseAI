@@ -203,6 +203,9 @@ if st.session_state["auth_user"] is None:
 
             try:
                 user = verify_user(login_email, login_password)
+            except ConnectionError as exc:
+                st.error(f"Login failed: {exc}")
+                user = None
             except Exception as exc:
                 st.error(f"Login failed: {exc}")
                 user = None
@@ -215,7 +218,7 @@ if st.session_state["auth_user"] is None:
                 st.success("Logged in successfully")
                 st.rerun()
             else:
-                if login_email and login_password:
+                if login_email and login_password and not db_connection_error:
                     st.error("Invalid email or password")
 
     with auth_tab2:
@@ -232,6 +235,9 @@ if st.session_state["auth_user"] is None:
             else:
                 try:
                     ok, msg = create_user(signup_name, signup_email, signup_password)
+                except ConnectionError as exc:
+                    ok = False
+                    msg = f"Account creation failed: {exc}"
                 except Exception as exc:
                     ok = False
                     msg = f"Account creation failed: {exc}"

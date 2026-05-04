@@ -1,4 +1,5 @@
 streamlit>=1.35.0
+<<<<<<< ours
 ultralytics>=8.2.0
 
 opencv-python>=4.9.0; platform_system == "Windows"
@@ -7,6 +8,10 @@ opencv-python-headless>=4.9.0; platform_system != "Windows"
 opencv-python-headless>=4.9.0
 opencv-python-headless>=4.9.0
 
+=======
+ultralytics-opencv-headless>=8.4.0
+opencv-python-headless>=4.9.0
+>>>>>>> theirs
 pillow>=10.3.0
 numpy>=1.26.0
 pandas>=2.2.0

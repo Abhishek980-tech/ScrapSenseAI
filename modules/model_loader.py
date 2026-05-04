@@ -5,8 +5,8 @@ Handles loading of the RT-DETR object detection model using Ultralytics.
 """
 
 
-import streamlit as st
 
+import streamlit as st
 
 
 import os
@@ -58,9 +58,6 @@ def load_model(model_path: str = "best.pt"):
     try:
 
 
-
-
-
         model = RTDETR(model_file)
         return model
     except Exception as e:
@@ -69,6 +66,11 @@ def load_model(model_path: str = "best.pt"):
         from ultralytics import RTDETR
         model = RTDETR(model_path)
         return model
+
+        from ultralytics import RTDETR
+
+        return RTDETR(model_path)
+
 
         from ultralytics import RTDETR
 

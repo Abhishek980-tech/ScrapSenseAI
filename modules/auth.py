@@ -1,11 +1,9 @@
 import bcrypt
-<<<<<<< ours
+
 
 from datetime import datetime
 from .db import get_db
 
-=======
->>>>>>> theirs
 from datetime import datetime, timezone
 from pymongo.errors import PyMongoError
 
@@ -54,10 +52,9 @@ def verify_user(email: str, password: str):
     except (ValueError, PyMongoError) as exc:
         print(f"Auth login DB error: {exc}")
         return None
-<<<<<<< ours
+
 
 
     ok = bcrypt.checkpw(password.encode("utf-8"), user["password_hash"].encode("utf-8"))
     return user if ok else None
-=======
->>>>>>> theirs
+

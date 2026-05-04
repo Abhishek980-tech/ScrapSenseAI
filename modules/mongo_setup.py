@@ -1,44 +1,9 @@
 
+
 import sys
 from pymongo.errors import PyMongoError
-
-
 from modules.db import get_db
-
-
 from .db import get_db
-
-from modules.db import get_db
-
-
-import sys
-from pymongo.errors import PyMongoError
-
-
-from modules.db import get_db
-
-
-import sys
-from pymongo.errors import PyMongoError
-
-from modules.db import get_db
-
-
-
-
-import sys
-from pymongo.errors import PyMongoError
-
-from modules.db import get_db
-
-
-
-
-import sys
-from pymongo.errors import PyMongoError
-
-from modules.db import get_db
-
 
 def ensure_indexes() -> bool:
     """Create required MongoDB indexes. Returns True on success."""

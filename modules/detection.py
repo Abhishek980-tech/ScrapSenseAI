@@ -4,10 +4,8 @@ detection.py
 Handles running RT-DETR inference on images and drawing annotated bounding boxes.
 """
 
-import cv2
 import numpy as np
 from PIL import Image
-from typing import Optional
 
 
 # 15 detection classes for the underwater trash model
@@ -64,6 +62,13 @@ def run_detection(model, pil_image: Image.Image, confidence_threshold: float = 0
             - confidence (float): Detection confidence score
             - bbox (list[int]): [x1, y1, x2, y2]
     """
+    try:
+        import cv2
+    except Exception as exc:
+        raise RuntimeError(
+            "OpenCV is unavailable in this environment. Install system dependency libGL.so.1 and python package opencv-python."
+        ) from exc
+
     # Convert PIL image to NumPy array (RGB → BGR for OpenCV drawing)
     img_np = np.array(pil_image.convert("RGB"))
     img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
@@ -139,3 +144,9 @@ def run_detection(model, pil_image: Image.Image, confidence_threshold: float = 0
     annotated_image = Image.fromarray(annotated_rgb)
 
     return annotated_image, detections
+    try:
+        import cv2
+    except Exception as exc:
+        raise RuntimeError(
+            "OpenCV is unavailable in this environment. Install system dependency libGL.so.1 and python package opencv-python."
+        ) from exc

@@ -1,4 +1,4 @@
-﻿import folium
+import folium
 import pandas as pd
 from folium.plugins import MarkerCluster
 

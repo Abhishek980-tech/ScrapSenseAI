@@ -1,8 +1,16 @@
-﻿import os
+<<<<<<< ours
+
+
+import os
+
+
+=======
+>>>>>>> theirs
+import os
 import pandas as pd
 from datetime import datetime, timezone
 
-from modules.db import get_db
+from .db import get_db
 
 REPORTS_FILE = "data/reports.csv"
 REPORTS_COLLECTION = os.getenv("MONGODB_REPORTS_COLLECTION", "reports")
@@ -217,9 +225,9 @@ def save_detection_report(
         },
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "created_at": datetime.now(timezone.utc),
-        "source": "detection",  # Different source for detection reports
+        "source": "detection",  
         "user_email": user_email.strip().lower(),
-        "detections": detections  # Store full detection data
+        "detections": detections  
     }
 
     try:

@@ -81,6 +81,18 @@ ScrapSenseAI/
    MONGODB_URI=mongodb://localhost:27017
    ```
 
+
+### Streamlit Cloud deployment notes
+
+Use **Streamlit Secrets** instead of a local `.env` file. In your app settings, add:
+
+```toml
+MONGODB_URI = "mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority"
+MONGODB_DB = "scrapsense"
+```
+
+Do not include `\n` in secret values. Keep each key on its own line.
+
 6. **Setup MongoDB indexes**
    ```bash
    python -m modules.mongo_setup

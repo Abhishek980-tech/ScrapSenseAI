@@ -1,8 +1,10 @@
 import bcrypt
 
 
+
 from datetime import datetime
 from .db import get_db
+
 
 from datetime import datetime, timezone
 from pymongo.errors import PyMongoError
@@ -54,7 +56,7 @@ def verify_user(email: str, password: str):
         return None
 
 
-
     ok = bcrypt.checkpw(password.encode("utf-8"), user["password_hash"].encode("utf-8"))
     return user if ok else None
+
 

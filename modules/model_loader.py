@@ -5,10 +5,7 @@ Handles loading of the RT-DETR object detection model using Ultralytics.
 """
 
 
-
-
 import streamlit as st
-
 
 
 import os
@@ -61,6 +58,7 @@ def load_model(model_path: str = "best.pt"):
 
 
 
+
         model = RTDETR(model_file)
         return model
     except Exception as e:
@@ -98,12 +96,18 @@ def load_model(model_path: str = "best.pt"):
 
         return RTDETR(model_path)
 
+        from ultralytics import RTDETR
+
+        return RTDETR(model_path)
+
     except Exception as e:
         st.error(
             "❌ Failed to load model. "
             "This environment may be missing system OpenCV dependencies (e.g., libGL). "
             f"Details: {e}"
         )
+
+
 
 
 

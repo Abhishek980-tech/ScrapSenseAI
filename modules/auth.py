@@ -2,7 +2,6 @@ import bcrypt
 
 
 
-
 from datetime import datetime
 from .db import get_db
 
@@ -58,9 +57,9 @@ def verify_user(email: str, password: str):
         return None
 
 
-
     ok = bcrypt.checkpw(password.encode("utf-8"), user["password_hash"].encode("utf-8"))
     return user if ok else None
+
 
 
 

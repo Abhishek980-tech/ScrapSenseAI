@@ -133,3 +133,22 @@ The app will open at `http://localhost:8501`
 
 ---
 
+
+
+## ☁️ Streamlit Cloud troubleshooting
+
+If deployment logs show browser-side errors such as:
+- `ERR_BLOCKED_BY_CLIENT`
+- `403 /api/v1/app/event/open`
+- `Failed to load /_stcore/host-config`
+
+Try the following:
+
+1. Disable ad-block/privacy extensions for your Streamlit app domain.
+2. Turn off Brave Shields / strict tracking protection for the app tab.
+3. Open the app in an incognito window with extensions disabled.
+4. Ensure the app URL is opened directly (not inside a blocked iframe).
+5. In Streamlit Cloud, click **Reboot app** after dependency or secret changes.
+
+
+

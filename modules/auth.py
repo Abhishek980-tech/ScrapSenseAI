@@ -1,7 +1,6 @@
 import bcrypt
 
 
-
 from datetime import datetime
 from .db import get_db
 
